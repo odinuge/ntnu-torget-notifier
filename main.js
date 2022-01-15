@@ -38,6 +38,7 @@ let isFirst = true;
       await page.goto("https://www.ntnu.no/nettbutikk/gjenbruk/torget/", {
         waitUntil: "load"
       });
+      await page.waitForSelector('input[id="username"]')
       await page.evaluate(() => {
         document.querySelector('input[id="username"]').value = FEIDE_USERNAME;
         document.querySelector('input[id="password"]').value = FEIDE_PASSWORD;
