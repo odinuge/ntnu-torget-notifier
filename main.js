@@ -6,7 +6,8 @@ const {
   SLACK_WEBHOOK_URL,
   FEIDE_USERNAME,
   FEIDE_PASSWORD,
-  ONLY_INCLUDE_TAKE_HOME_ITEMS
+  ONLY_INCLUDE_TAKE_HOME_ITEMS,
+  DEBUG
 } = process.env;
 if (!SLACK_WEBHOOK_URL || !FEIDE_PASSWORD || !FEIDE_USERNAME) {
   console.error("Env vars missing");
@@ -16,6 +17,10 @@ if (!SLACK_WEBHOOK_URL || !FEIDE_PASSWORD || !FEIDE_USERNAME) {
 const destinationUrl = ONLY_INCLUDE_TAKE_HOME_ITEMS ?
 	"https://www.ntnu.no/nettbutikk/gjenbruk/produktkategori/ta-med-hjem/" :
 	"https://www.ntnu.no/nettbutikk/gjenbruk/torget/";
+
+if (!DEBUG) {
+  console.debug = function() {}
+}
 
 const slack = slackNotify(SLACK_WEBHOOK_URL);
 const seen = new Set();
@@ -29,6 +34,7 @@ let isFirst = true;
   while (true) {
     let browser;
     try {
+      console.debug("Launching browser");
       browser = await puppeteer.launch({
         headless: true,
         devtools: false,
@@ -39,18 +45,24 @@ let isFirst = true;
           "--disable-dev-shm-usage"
         ]
       });
+      console.debug("Opening page");
       const page = await browser.newPage();
       page.setDefaultTimeout(60000);
+      console.debug("Loading destination url", destinationUrl);
       await page.goto(destinationUrl, {
         waitUntil: "load"
       });
+      console.debug("Waiting for input elements to load");
       await page.waitForSelector('input[id="username"]')
+      console.debug("Inputting credentials");
       await page.evaluate(vars => {
         document.querySelector('input[id="username"]').value = vars.FEIDE_USERNAME;
         document.querySelector('input[id="password"]').value = vars.FEIDE_PASSWORD;
         document.querySelector('button[type="submit"]').click();
       }, { FEIDE_USERNAME, FEIDE_PASSWORD });
+      console.debug("Waiting for main page to load");
       await page.waitForSelector('main[role="main"]');
+      console.debug("Collecting results");
       const result = await page.evaluate(() => {
         const things = document.getElementsByClassName("product");
         const result = [];
@@ -65,6 +77,7 @@ let isFirst = true;
         return result;
       });
 
+      console.debug("Found results", result);
       result.forEach(({ id, url, img, txt, txt2 }) => {
         console.log("Found id", id);
         if (seen.has(id)) {
@@ -73,6 +86,7 @@ let isFirst = true;
         }
         seen.add(id);
         if (isFirst) {
+          console.debug("- Skipping because this is the first check, so it is not new.");
           return;
         }
 
@@ -102,6 +116,7 @@ let isFirst = true;
       });
       isFirst = false;
     } catch (e) {
+      console.debug(e);
     } finally {
       if (browser) {
         browser.close();
