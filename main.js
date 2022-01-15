@@ -39,11 +39,11 @@ let isFirst = true;
         waitUntil: "load"
       });
       await page.waitForSelector('input[id="username"]')
-      await page.evaluate(() => {
-        document.querySelector('input[id="username"]').value = FEIDE_USERNAME;
-        document.querySelector('input[id="password"]').value = FEIDE_PASSWORD;
+      await page.evaluate(vars => {
+        document.querySelector('input[id="username"]').value = vars.FEIDE_USERNAME;
+        document.querySelector('input[id="password"]').value = vars.FEIDE_PASSWORD;
         document.querySelector('button[type="submit"]').click();
-      });
+      }, { FEIDE_USERNAME, FEIDE_PASSWORD });
       await page.waitForSelector('main[role="main"]');
       const result = await page.evaluate(() => {
         const things = document.getElementsByClassName("product");
