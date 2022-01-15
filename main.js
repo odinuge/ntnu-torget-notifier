@@ -5,12 +5,17 @@ const {
   EACH_N_SEC = "60",
   SLACK_WEBHOOK_URL,
   FEIDE_USERNAME,
-  FEIDE_PASSWORD
+  FEIDE_PASSWORD,
+  ONLY_INCLUDE_TAKE_HOME_ITEMS
 } = process.env;
 if (!SLACK_WEBHOOK_URL || !FEIDE_PASSWORD || !FEIDE_USERNAME) {
   console.error("Env vars missing");
   return 2;
 }
+
+const destinationUrl = ONLY_INCLUDE_TAKE_HOME_ITEMS ?
+	"https://www.ntnu.no/nettbutikk/gjenbruk/produktkategori/ta-med-hjem/" :
+	"https://www.ntnu.no/nettbutikk/gjenbruk/torget/";
 
 const slack = slackNotify(SLACK_WEBHOOK_URL);
 const seen = new Set();
@@ -35,7 +40,7 @@ let isFirst = true;
       });
       const page = await browser.newPage();
       page.setDefaultTimeout(60000);
-      await page.goto("https://www.ntnu.no/nettbutikk/gjenbruk/torget/", {
+      await page.goto(destinationUrl, {
         waitUntil: "load"
       });
       await page.waitForSelector('input[id="username"]')
