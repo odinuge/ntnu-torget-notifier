@@ -75,7 +75,7 @@ let isFirst = true;
           text: txt,
           unfurl_links: 1,
           icon_url:
-            "https://innsida.ntnu.no/c/wiki/get_page_attachment?p_l_id=22780&nodeId=24647&title=Bruksregler+for+NTNU-logoen&fileName=logo_norsk_uten_slagord.jpg",
+            "http://engineering-team.net/wp-content/uploads/2015/12/logo_ntnu.png",
           username: "NTNU",
           blocks: [
             {
