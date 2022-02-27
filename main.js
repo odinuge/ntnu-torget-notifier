@@ -27,8 +27,9 @@ function sleep(ms) {
 let isFirst = true;
 (async () => {
   while (true) {
+    let browser;
     try {
-      const browser = await puppeteer.launch({
+      browser = await puppeteer.launch({
         headless: true,
         devtools: false,
         executablePath: "/usr/bin/chromium-browser",
@@ -100,8 +101,12 @@ let isFirst = true;
         });
       });
       isFirst = false;
-      browser.close();
-    } catch (e) {}
+    } catch (e) {
+    } finally {
+      if (browser) {
+        browser.close();
+      }
+    }
     await sleep(parseInt(EACH_N_SEC, 10) * 1000);
   }
 })();
