@@ -9,7 +9,8 @@ RUN apk add --no-cache \
       ca-certificates \
       ttf-freefont \
       nodejs \
-      yarn
+      yarn \
+      dumb-init
 
 
 # Tell Puppeteer to skip installing Chrome. We'll be using the installed package.
@@ -27,4 +28,4 @@ RUN addgroup -S pptruser && adduser -S -g pptruser pptruser \
 # Run everything after as non-privileged user.
 USER pptruser
 
-CMD ["node", "main.js"]
+CMD ["dumb-init", "node", "main.js"]
