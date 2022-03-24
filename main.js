@@ -95,7 +95,8 @@ let isFirst = true;
           text: txt,
           unfurl_links: 1,
           icon_url:
-            "http://engineering-team.net/wp-content/uploads/2015/12/logo_ntnu.png",
+            "http://web.archive.org/web/20220119111843if_/" +
+              "http://engineering-team.net/wp-content/uploads/2015/12/logo_ntnu.png",
           username: "NTNU",
           blocks: [
             {
