@@ -5,11 +5,21 @@ const {
   EACH_N_SEC = "60",
   SLACK_WEBHOOK_URL,
   FEIDE_USERNAME,
-  FEIDE_PASSWORD
+  FEIDE_PASSWORD,
+  ONLY_INCLUDE_TAKE_HOME_ITEMS,
+  DEBUG
 } = process.env;
 if (!SLACK_WEBHOOK_URL || !FEIDE_PASSWORD || !FEIDE_USERNAME) {
   console.error("Env vars missing");
   return 2;
+}
+
+const destinationUrl = ONLY_INCLUDE_TAKE_HOME_ITEMS ?
+	"https://www.ntnu.no/nettbutikk/gjenbruk/produktkategori/ta-med-hjem/" :
+	"https://www.ntnu.no/nettbutikk/gjenbruk/torget/";
+
+if (!DEBUG) {
+  console.debug = function() {}
 }
 
 const slack = slackNotify(SLACK_WEBHOOK_URL);
@@ -22,28 +32,37 @@ function sleep(ms) {
 let isFirst = true;
 (async () => {
   while (true) {
+    let browser;
     try {
-      const browser = await puppeteer.launch({
+      console.debug("Launching browser");
+      browser = await puppeteer.launch({
         headless: true,
         devtools: false,
-        executablePath: "/usr/bin/chromium",
+        executablePath: "/usr/bin/chromium-browser",
         args: [
           "--no-sandbox",
           "--disable-setuid-sandbox",
           "--disable-dev-shm-usage"
         ]
       });
+      console.debug("Opening page");
       const page = await browser.newPage();
       page.setDefaultTimeout(60000);
-      await page.goto("https://www.ntnu.no/nettbutikk/gjenbruk/torget/", {
+      console.debug("Loading destination url", destinationUrl);
+      await page.goto(destinationUrl, {
         waitUntil: "load"
       });
-      await page.evaluate(() => {
-        document.querySelector('input[id="username"]').value = FEIDE_USERNAME;
-        document.querySelector('input[id="password"]').value = FEIDE_PASSWORD;
+      console.debug("Waiting for input elements to load");
+      await page.waitForSelector('input[id="username"]')
+      console.debug("Inputting credentials");
+      await page.evaluate(vars => {
+        document.querySelector('input[id="username"]').value = vars.FEIDE_USERNAME;
+        document.querySelector('input[id="password"]').value = vars.FEIDE_PASSWORD;
         document.querySelector('button[type="submit"]').click();
-      });
+      }, { FEIDE_USERNAME, FEIDE_PASSWORD });
+      console.debug("Waiting for main page to load");
       await page.waitForSelector('main[role="main"]');
+      console.debug("Collecting results");
       const result = await page.evaluate(() => {
         const things = document.getElementsByClassName("product");
         const result = [];
@@ -58,6 +77,7 @@ let isFirst = true;
         return result;
       });
 
+      console.debug("Found results", result);
       result.forEach(({ id, url, img, txt, txt2 }) => {
         console.log("Found id", id);
         if (seen.has(id)) {
@@ -66,6 +86,7 @@ let isFirst = true;
         }
         seen.add(id);
         if (isFirst) {
+          console.debug("- Skipping because this is the first check, so it is not new.");
           return;
         }
 
@@ -74,7 +95,8 @@ let isFirst = true;
           text: txt,
           unfurl_links: 1,
           icon_url:
-            "https://innsida.ntnu.no/c/wiki/get_page_attachment?p_l_id=22780&nodeId=24647&title=Bruksregler+for+NTNU-logoen&fileName=logo_norsk_uten_slagord.jpg",
+            "http://web.archive.org/web/20220119111843if_/" +
+              "http://engineering-team.net/wp-content/uploads/2015/12/logo_ntnu.png",
           username: "NTNU",
           blocks: [
             {
@@ -94,8 +116,13 @@ let isFirst = true;
         });
       });
       isFirst = false;
-      browser.close();
-    } catch (e) {}
+    } catch (e) {
+      console.debug(e);
+    } finally {
+      if (browser) {
+        browser.close();
+      }
+    }
     await sleep(parseInt(EACH_N_SEC, 10) * 1000);
   }
 })();
